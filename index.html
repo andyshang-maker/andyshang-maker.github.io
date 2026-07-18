@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高中数学学习资源平台</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif; background: #f5f7fa; color: #333; line-height: 1.6; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        
+        header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white; padding: 30px 20px; margin-bottom: 30px;
+            border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        header h1 { font-size: 28px; margin-bottom: 8px; font-weight: 600; }
+        header p { font-size: 14px; opacity: 0.85; }
+        
+        .admin-btn {
+            float: right; background: #3498db; color: white; border: none;
+            padding: 8px 20px; border-radius: 6px; cursor: pointer; font-size: 14px;
+            transition: background 0.3s;
+        }
+        .admin-btn:hover { background: #2980b9; }
+        
+        .category-tabs { display: flex; gap: 10px; margin-bottom: 25px; flex-wrap: wrap; }
+        .category-tab {
+            padding: 10px 20px; background: white; border: none; border-radius: 8px;
+            cursor: pointer; font-size: 14px; color: #555;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: all 0.3s;
+        }
+        .category-tab:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .category-tab.active { background: #2c3e50; color: white; }
+        
+        .file-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+        .file-card {
+            background: white; border-radius: 12px; padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08); transition: transform 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+        }
+        .file-card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,0.12); }
+        
+        .file-icon { font-size: 48px; margin-bottom: 12px; text-align: center; }
+        .file-name { font-size: 16px; font-weight: 600; margin-bottom: 8px; color: #2c3e50; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .file-meta { font-size: 13px; color: #888; margin-bottom: 4px; }
+        
+        .download-btn {
+            display: block; width: 100%; margin-top: 15px; padding: 10px;
+            background: #3498db; color: white; border: none; border-radius: 6px;
+            cursor: pointer; font-size: 14px; transition: background 0.3s;
+        }
+        .download-btn:hover { background: #2980b9; }
+        
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000;
+        }
+        .modal-overlay.show { display: flex; }
+        
+        .modal {
+            background: white; border-radius: 12px; padding: 30px; width: 90%; max-width: 500px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2); animation: fadeIn 0.3s;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .modal h2 { margin-bottom: 25px; color: #2c3e50; font-size: 22px; }
+        
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; color: #555; }
+        .form-group input, .form-group select {
+            width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px;
+            font-size: 14px; transition: border-color 0.3s;
+        }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: #3498db; }
+        
+        .btn-group { display: flex; gap: 10px; margin-top: 25px; }
+        .btn {
+            flex: 1; padding: 12px; border: none; border-radius: 8px;
+            font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s;
+        }
+        .btn-primary { background: #3498db; color: white; }
+        .btn-primary:hover { background: #2980b9; }
+        .btn-secondary { background: #ecf0f1; color: #555; }
+        .btn-secondary:hover { background: #bdc3c7; }
+        .btn-danger { background: #e74c3c; color: white; }
+        .btn-danger:hover { background: #c0392b; }
+        
+        .admin-panel { display: none; }
+        .admin-panel.show { display: block; }
+        
+        .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .admin-header h2 { color: #2c3e50; }
+        
+        .logout-btn {
+            background: #e74c3c; color: white; border: none; padding: 8px 16px;
+            border-radius: 6px; cursor: pointer; font-size: 14px; transition: background 0.3s;
+        }
+        .logout-btn:hover { background: #c0392b; }
+        
+        .file-list { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .file-list-header {
+            display: grid; grid-template-columns: 1fr 150px 80px; padding: 15px 20px;
+            background: #f8f9fa; font-weight: 600; font-size: 14px; color: #666;
+        }
+        .file-list-item {
+            display: grid; grid-template-columns: 1fr 150px 80px; padding: 15px 20px;
+            border-bottom: 1px solid #eee; align-items: center; transition: background 0.2s;
+        }
+        .file-list-item:hover { background: #f8f9fa; }
+        .file-list-item:last-child { border-bottom: none; }
+        .file-list-item .file-name { margin: 0; }
+        
+        .delete-btn {
+            background: none; border: none; color: #e74c3c; cursor: pointer;
+            font-size: 16px; padding: 5px; transition: color 0.3s;
+        }
+        .delete-btn:hover { color: #c0392b; }
+        
+        .empty-state { text-align: center; padding: 60px 20px; color: #888; }
+        .empty-state i { font-size: 64px; margin-bottom: 15px; color: #ddd; }
+        .empty-state p { font-size: 16px; }
+        
+        .save-indicator {
+            display: none; padding: 10px; background: #27ae60; color: white;
+            border-radius: 6px; margin-top: 15px; text-align: center;
+        }
+        .save-indicator.show { display: block; }
+        
+        @media (max-width: 768px) {
+            header h1 { font-size: 22px; }
+            .admin-btn { float: none; margin-top: 15px; }
+            .category-tabs { justify-content: center; }
+            .file-grid { grid-template-columns: 1fr; }
+            .file-list-header, .file-list-item { grid-template-columns: 1fr 80px; gap: 10px; }
+            .file-list-header > div:nth-child(2), .file-list-item > div:nth-child(2) { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <button class="admin-btn" onclick="openLoginModal()">👨‍🏫 教师管理</button>
+            <h1>📚 高中数学学习资源平台</h1>
+            <p>欢迎来到数学学习资源中心，点击文件即可下载学习资料</p>
+        </header>
+
+        <div class="category-tabs" id="categoryTabs">
+            <button class="category-tab active" data-category="all">全部文件</button>
+        </div>
+
+        <div class="file-grid" id="fileGrid">
+            <div class="empty-state">
+                <i>📁</i>
+                <p>暂无文件，请等待老师上传学习资料</p>
+            </div>
+        </div>
+
+        <div class="admin-panel" id="adminPanel">
+            <div class="admin-header">
+                <h2>📤 文件管理</h2>
+                <button class="logout-btn" onclick="logout()">退出登录</button>
+            </div>
+
+            <div class="modal" style="display:block;position:static;box-shadow:none;width:100%;max-width:none;border-radius:12px;">
+                <h2>添加新文件</h2>
+                
+                <div class="form-group">
+                    <label for="fileName">文件名称</label>
+                    <input type="text" id="fileName" placeholder="例如：高一数学第一章习题.pdf">
+                </div>
+
+                <div class="form-group">
+                    <label for="fileUrl">下载链接</label>
+                    <input type="text" id="fileUrl" placeholder="从云盘复制分享链接粘贴到这里">
+                    <p style="font-size:12px;color:#888;margin-top:5px;">提示：先将文件上传到百度网盘/蓝奏云等，然后获取公开分享链接</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="fileCategory">文件分类</label>
+                    <select id="fileCategory">
+                        <option value="高一数学">高一数学</option>
+                        <option value="高二数学">高二数学</option>
+                        <option value="高三数学">高三数学</option>
+                        <option value="高考真题">高考真题</option>
+                        <option value="模拟试题">模拟试题</option>
+                        <option value="知识点总结">知识点总结</option>
+                        <option value="其他">其他</option>
+                    </select>
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="addFile()">添加文件</button>
+                    <button class="btn btn-secondary" onclick="exportData()">导出数据</button>
+                </div>
+                
+                <div class="save-indicator" id="saveIndicator">✅ 数据已保存！</div>
+            </div>
+
+            <h3 style="margin:30px 0 15px;color:#2c3e50;">已添加文件列表</h3>
+            <div class="file-list" id="adminFileList">
+                <div class="file-list-header">
+                    <div>文件名</div>
+                    <div>分类</div>
+                    <div>操作</div>
+                </div>
+                <div id="adminFileItems"></div>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="loginModal">
+            <div class="modal">
+                <h2>🔐 教师登录</h2>
+                <div class="form-group">
+                    <label for="password">管理密码</label>
+                    <input type="password" id="password" placeholder="请输入管理密码">
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-secondary" onclick="closeLoginModal()">取消</button>
+                    <button class="btn btn-primary" onclick="login()">登录</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="deleteModal">
+            <div class="modal">
+                <h2>⚠️ 确认删除</h2>
+                <p>确定要删除此文件吗？此操作无法撤销。</p>
+                <div class="btn-group">
+                    <button class="btn btn-secondary" onclick="closeDeleteModal()">取消</button>
+                    <button class="btn btn-danger" onclick="confirmDelete()">确认删除</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="importModal">
+            <div class="modal">
+                <h2>📥 导入数据</h2>
+                <div class="form-group">
+                    <label for="importData">粘贴导出的JSON数据</label>
+                    <textarea id="importData" style="width:100%;height:200px;padding:12px;border:2px solid #e0e0e0;border-radius:8px;font-size:14px;" placeholder="在此粘贴导出的JSON数据..."></textarea>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-secondary" onclick="closeImportModal()">取消</button>
+                    <button class="btn btn-primary" onclick="importData()">确认导入</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const ADMIN_PASSWORD = "20010302syc";
+        let deleteFileId = null;
+
+        function getDefaultFiles() {
+            return [
+                { id: '1', name: '高中数学公式大全.pdf', url: '#', category: '知识点总结', size: '2.3 MB' },
+                { id: '2', name: '高一数学必修一习题集.pdf', url: '#', category: '高一数学', size: '5.1 MB' },
+                { id: '3', name: '2024年高考数学真题全国卷.pdf', url: '#', category: '高考真题', size: '8.7 MB' }
+            ];
+        }
+
+        function getFiles() {
+            const stored = localStorage.getItem('mathResourceFiles');
+            if (stored) {
+                try {
+                    return JSON.parse(stored);
+                } catch {
+                    return getDefaultFiles();
+                }
+            }
+            return getDefaultFiles();
+        }
+
+        function saveFiles(files) {
+            localStorage.setItem('mathResourceFiles', JSON.stringify(files));
+            showSaveIndicator();
+        }
+
+        function showSaveIndicator() {
+            const indicator = document.getElementById('saveIndicator');
+            indicator.classList.add('show');
+            setTimeout(() => indicator.classList.remove('show'), 2000);
+        }
+
+        function openLoginModal() {
+            document.getElementById('loginModal').classList.add('show');
+        }
+
+        function closeLoginModal() {
+            document.getElementById('loginModal').classList.remove('show');
+            document.getElementById('password').value = '';
+        }
+
+        function login() {
+            const password = document.getElementById('password').value;
+            if (password === ADMIN_PASSWORD) {
+                closeLoginModal();
+                document.getElementById('adminPanel').classList.add('show');
+                document.getElementById('fileGrid').style.display = 'none';
+                document.getElementById('categoryTabs').style.display = 'none';
+                loadAdminFiles();
+            } else {
+                alert('密码错误，请重试');
+            }
+        }
+
+        function logout() {
+            document.getElementById('adminPanel').classList.remove('show');
+            document.getElementById('fileGrid').style.display = 'grid';
+            document.getElementById('categoryTabs').style.display = 'flex';
+            loadFiles();
+        }
+
+        function addFile() {
+            const name = document.getElementById('fileName').value.trim();
+            const url = document.getElementById('fileUrl').value.trim();
+            const category = document.getElementById('fileCategory').value;
+
+            if (!name) {
+                alert('请输入文件名称');
+                return;
+            }
+            if (!url) {
+                alert('请输入下载链接');
+                return;
+            }
+
+            const files = getFiles();
+            files.unshift({
+                id: Date.now().toString(),
+                name: name,
+                url: url,
+                category: category,
+                size: '未知大小'
+            });
+
+            saveFiles(files);
+            loadAdminFiles();
+            
+            document.getElementById('fileName').value = '';
+            document.getElementById('fileUrl').value = '';
+            alert('文件添加成功！');
+        }
+
+        function getFileIcon(fileName) {
+            const ext = fileName.split('.').pop().toLowerCase();
+            const icons = {
+                'pdf': '📕', 'doc': '📘', 'docx': '📘', 'xls': '📗', 'xlsx': '📗',
+                'ppt': '📙', 'pptx': '📙', 'jpg': '🖼️', 'jpeg': '🖼️', 'png': '🖼️',
+                'gif': '🖼️', 'mp4': '🎬', 'avi': '🎬', 'zip': '📦', 'rar': '📦'
+            };
+            return icons[ext] || '📄';
+        }
+
+        async function loadFiles() {
+            const files = getFiles();
+            updateCategoryTabs(files);
+            renderFileGrid(files);
+        }
+
+        function updateCategoryTabs(files) {
+            const existingCategories = [...new Set(files.map(f => f.category))];
+            const allCategories = ['all', ...existingCategories];
+            
+            const tabsContainer = document.getElementById('categoryTabs');
+            tabsContainer.innerHTML = '';
+
+            allCategories.forEach(category => {
+                const btn = document.createElement('button');
+                btn.className = 'category-tab' + (category === 'all' ? ' active' : '');
+                btn.textContent = category === 'all' ? '全部文件' : category;
+                btn.dataset.category = category;
+                btn.onclick = () => filterFiles(category);
+                tabsContainer.appendChild(btn);
+            });
+        }
+
+        function renderFileGrid(files) {
+            const fileGrid = document.getElementById('fileGrid');
+            
+            if (files.length === 0) {
+                fileGrid.innerHTML = '<div class="empty-state"><i>📁</i><p>暂无文件，请等待老师上传学习资料</p></div>';
+                return;
+            }
+
+            fileGrid.innerHTML = files.map(file => `
+                <div class="file-card" onclick="downloadFile('${file.url}', '${file.name}')">
+                    <div class="file-icon">${getFileIcon(file.name)}</div>
+                    <div class="file-name">${file.name}</div>
+                    <div class="file-meta">📁 ${file.category}</div>
+                    <button class="download-btn">下载文件</button>
+                </div>
+            `).join('');
+        }
+
+        function filterFiles(category) {
+            document.querySelectorAll('.category-tab').forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`[data-category="${category}"]`).classList.add('active');
+
+            const files = getFiles();
+            const filtered = category === 'all' ? files : files.filter(f => f.category === category);
+            renderFileGrid(filtered);
+        }
+
+        function downloadFile(url, fileName) {
+            if (url === '#') {
+                alert('此文件链接尚未配置，请联系老师');
+                return;
+            }
+            window.open(url, '_blank');
+        }
+
+        function loadAdminFiles() {
+            const files = getFiles();
+            const fileItems = document.getElementById('adminFileItems');
+            
+            if (files.length === 0) {
+                fileItems.innerHTML = '<div class="file-list-item" style="grid-column:1/-1;text-align:center;color:#888;padding:30px;">暂无文件</div>';
+                return;
+            }
+
+            fileItems.innerHTML = files.map(file => `
+                <div class="file-list-item">
+                    <div><span style="margin-right:8px;">${getFileIcon(file.name)}</span>${file.name}</div>
+                    <div>${file.category}</div>
+                    <div><button class="delete-btn" onclick="openDeleteModal('${file.id}')">🗑️</button></div>
+                </div>
+            `).join('');
+        }
+
+        function openDeleteModal(fileId) {
+            deleteFileId = fileId;
+            document.getElementById('deleteModal').classList.add('show');
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').classList.remove('show');
+            deleteFileId = null;
+        }
+
+        function confirmDelete() {
+            if (!deleteFileId) return;
+
+            const files = getFiles();
+            const updatedFiles = files.filter(f => f.id !== deleteFileId);
+            saveFiles(updatedFiles);
+            closeDeleteModal();
+            loadAdminFiles();
+            alert('文件删除成功！');
+        }
+
+        function exportData() {
+            const files = getFiles();
+            const dataStr = JSON.stringify(files, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'math_resource_backup.json';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        function importData() {
+            const dataStr = document.getElementById('importData').value.trim();
+            if (!dataStr) {
+                alert('请先粘贴数据');
+                return;
+            }
+
+            try {
+                const files = JSON.parse(dataStr);
+                saveFiles(files);
+                closeImportModal();
+                loadAdminFiles();
+                alert('数据导入成功！');
+            } catch {
+                alert('数据格式错误，请检查');
+            }
+        }
+
+        loadFiles();
+    </script>
+</body>
+</html>

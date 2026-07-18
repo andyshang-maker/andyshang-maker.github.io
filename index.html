@@ -45,11 +45,14 @@
         .file-name { font-size: 16px; font-weight: 600; margin-bottom: 8px; color: #2c3e50; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .file-meta { font-size: 13px; color: #888; margin-bottom: 4px; }
         
-        .download-btn {
-            display: block; width: 100%; margin-top: 15px; padding: 10px;
-            background: #3498db; color: white; border: none; border-radius: 6px;
-            cursor: pointer; font-size: 14px; transition: background 0.3s;
+        .btn-group-horizontal { display: flex; gap: 8px; margin-top: 15px; }
+        .action-btn {
+            flex: 1; padding: 10px; border: none; border-radius: 6px;
+            cursor: pointer; font-size: 13px; transition: all 0.3s;
         }
+        .preview-btn { background: #27ae60; color: white; }
+        .preview-btn:hover { background: #219a52; }
+        .download-btn { background: #3498db; color: white; }
         .download-btn:hover { background: #2980b9; }
         
         .modal-overlay {
@@ -73,6 +76,27 @@
             font-size: 14px; transition: border-color 0.3s;
         }
         .form-group input:focus, .form-group select:focus { outline: none; border-color: #3498db; }
+        
+        .file-upload-area {
+            border: 2px dashed #e0e0e0; border-radius: 8px; padding: 30px;
+            text-align: center; cursor: pointer; transition: all 0.3s;
+            background: #fafafa;
+        }
+        .file-upload-area:hover, .file-upload-area.dragover { border-color: #3498db; background: #f0f8ff; }
+        .file-upload-area i { font-size: 48px; margin-bottom: 12px; color: #ccc; }
+        .file-upload-area p { font-size: 14px; color: #666; }
+        .file-upload-area input[type="file"] { display: none; }
+        
+        .upload-progress {
+            display: none; margin-top: 15px;
+        }
+        .upload-progress.show { display: block; }
+        .progress-bar {
+            width: 100%; height: 8px; background: #eee; border-radius: 4px; overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%; background: #3498db; border-radius: 4px; transition: width 0.3s;
+        }
         
         .btn-group { display: flex; gap: 10px; margin-top: 25px; }
         .btn {
@@ -126,6 +150,26 @@
             border-radius: 6px; margin-top: 15px; text-align: center;
         }
         .save-indicator.show { display: block; }
+
+        .preview-modal {
+            width: 90%; max-width: 900px; max-height: 80vh; padding: 20px;
+        }
+        .preview-content {
+            width: 100%; height: 500px; border: none; border-radius: 8px;
+        }
+        .preview-close-btn {
+            position: absolute; top: 15px; right: 15px;
+            background: rgba(0,0,0,0.5); color: white; border: none;
+            width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
+            font-size: 16px;
+        }
+
+        .config-section {
+            background: #fff3cd; border: 1px solid #ffeeba; border-radius: 8px;
+            padding: 15px; margin-bottom: 20px;
+        }
+        .config-section h3 { color: #856404; font-size: 14px; margin-bottom: 10px; }
+        .config-section p { font-size: 12px; color: #856404; line-height: 1.5; }
         
         @media (max-width: 768px) {
             header h1 { font-size: 22px; }
@@ -134,6 +178,7 @@
             .file-grid { grid-template-columns: 1fr; }
             .file-list-header, .file-list-item { grid-template-columns: 1fr 80px; gap: 10px; }
             .file-list-header > div:nth-child(2), .file-list-item > div:nth-child(2) { display: none; }
+            .preview-content { height: 300px; }
         }
     </style>
 </head>
@@ -142,7 +187,7 @@
         <header>
             <button class="admin-btn" onclick="openLoginModal()">👨‍🏫 教师管理</button>
             <h1>📚 高中数学学习资源平台</h1>
-            <p>欢迎来到数学学习资源中心，点击文件即可下载学习资料</p>
+            <p>欢迎来到数学学习资源中心，点击文件即可预览或下载</p>
         </header>
 
         <div class="category-tabs" id="categoryTabs">
@@ -162,18 +207,17 @@
                 <button class="logout-btn" onclick="logout()">退出登录</button>
             </div>
 
+            <div class="config-section">
+                <h3>📌 重要配置说明</h3>
+                <p>请在下方输入阿里云OSS配置信息，配置后才能上传文件。获取方法：登录阿里云 → 对象存储OSS → 创建Bucket → 获取AccessKey和Bucket域名。</p>
+            </div>
+
             <div class="modal" style="display:block;position:static;box-shadow:none;width:100%;max-width:none;border-radius:12px;">
                 <h2>添加新文件</h2>
                 
                 <div class="form-group">
                     <label for="fileName">文件名称</label>
                     <input type="text" id="fileName" placeholder="例如：高一数学第一章习题.pdf">
-                </div>
-
-                <div class="form-group">
-                    <label for="fileUrl">下载链接</label>
-                    <input type="text" id="fileUrl" placeholder="从云盘复制分享链接粘贴到这里">
-                    <p style="font-size:12px;color:#888;margin-top:5px;">提示：先将文件上传到百度网盘/蓝奏云等，然后获取公开分享链接</p>
                 </div>
 
                 <div class="form-group">
@@ -189,8 +233,25 @@
                     </select>
                 </div>
 
+                <div class="form-group">
+                    <label for="fileInput">选择文件</label>
+                    <div class="file-upload-area" id="fileUploadArea" onclick="document.getElementById('fileInput').click()">
+                        <i>📁</i>
+                        <p>点击或拖拽文件到此处上传</p>
+                        <p id="selectedFileName" style="font-size:12px;color:#3498db;margin-top:8px;"></p>
+                    </div>
+                    <input type="file" id="fileInput" onchange="handleFileSelect(event)">
+                </div>
+
+                <div class="upload-progress" id="uploadProgress">
+                    <div class="progress-bar">
+                        <div class="progress-bar-fill" id="progressBarFill" style="width:0%"></div>
+                    </div>
+                    <p id="progressText" style="font-size:12px;color:#666;margin-top:8px;text-align:center;">正在上传...</p>
+                </div>
+
                 <div class="btn-group">
-                    <button class="btn btn-primary" onclick="addFile()">添加文件</button>
+                    <button class="btn btn-primary" onclick="uploadFile()">上传文件</button>
                     <button class="btn btn-secondary" onclick="exportData()">导出数据</button>
                 </div>
                 
@@ -214,6 +275,11 @@
                 <div class="form-group">
                     <label for="password">管理密码</label>
                     <input type="password" id="password" placeholder="请输入管理密码">
+                </div>
+                <div class="form-group">
+                    <label for="githubToken">GitHub Token</label>
+                    <input type="password" id="githubToken" placeholder="输入GitHub Token用于上传文件">
+                    <p style="font-size:12px;color:#888;margin-top:5px;">提示：Token只在本次登录有效，不会保存到代码中</p>
                 </div>
                 <div class="btn-group">
                     <button class="btn btn-secondary" onclick="closeLoginModal()">取消</button>
@@ -246,11 +312,27 @@
                 </div>
             </div>
         </div>
+
+        <div class="modal-overlay" id="previewModal">
+            <div class="modal preview-modal">
+                <button class="preview-close-btn" onclick="closePreviewModal()">✕</button>
+                <h2 id="previewTitle">文件预览</h2>
+                <div id="previewContent"></div>
+            </div>
+        </div>
     </div>
 
     <script>
         const ADMIN_PASSWORD = "20010302syc";
         let deleteFileId = null;
+        let selectedFile = null;
+
+        let githubToken = "";
+        const GITHUB_CONFIG = {
+            owner: "andyshang-maker",
+            repo: "andyshang-maker.github.io",
+            branch: "main"
+        };
 
         function getDefaultFiles() {
             return [
@@ -294,121 +376,231 @@
 
         function login() {
             const password = document.getElementById('password').value;
+            const token = document.getElementById('githubToken').value.trim();
+            
             if (password === ADMIN_PASSWORD) {
+                githubToken = token;
                 closeLoginModal();
                 document.getElementById('adminPanel').classList.add('show');
-                document.getElementById('fileGrid').style.display = 'none';
-                document.getElementById('categoryTabs').style.display = 'none';
                 loadAdminFiles();
             } else {
-                alert('密码错误，请重试');
+                alert('密码错误，请重试！');
             }
         }
 
         function logout() {
             document.getElementById('adminPanel').classList.remove('show');
-            document.getElementById('fileGrid').style.display = 'grid';
-            document.getElementById('categoryTabs').style.display = 'flex';
-            loadFiles();
         }
 
-        function addFile() {
-            const name = document.getElementById('fileName').value.trim();
-            const url = document.getElementById('fileUrl').value.trim();
-            const category = document.getElementById('fileCategory').value;
+        function handleFileSelect(event) {
+            selectedFile = event.target.files[0];
+            if (selectedFile) {
+                document.getElementById('selectedFileName').textContent = '已选择: ' + selectedFile.name;
+            }
+        }
 
-            if (!name) {
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        async function uploadFile() {
+            const fileName = document.getElementById('fileName').value.trim();
+            const category = document.getElementById('fileCategory').value;
+            
+            if (!fileName) {
                 alert('请输入文件名称');
                 return;
             }
-            if (!url) {
-                alert('请输入下载链接');
+            
+            if (!selectedFile) {
+                alert('请选择要上传的文件');
                 return;
             }
 
-            const files = getFiles();
-            files.unshift({
-                id: Date.now().toString(),
-                name: name,
-                url: url,
-                category: category,
-                size: '未知大小'
-            });
+            if (!githubToken) {
+                alert('请在登录时输入GitHub Token！\n\n获取方法：\n1. 登录GitHub → Settings → Developer settings\n2. 点击 Personal access tokens → Tokens (classic)\n3. Generate new token (classic)\n4. 勾选 repo 权限，生成后复制Token\n5. 在登录时输入Token');
+                return;
+            }
 
-            saveFiles(files);
-            loadAdminFiles();
+            const progressBar = document.getElementById('uploadProgress');
+            const progressFill = document.getElementById('progressBarFill');
+            const progressText = document.getElementById('progressText');
             
-            document.getElementById('fileName').value = '';
-            document.getElementById('fileUrl').value = '';
-            alert('文件添加成功！');
+            progressBar.classList.add('show');
+            progressFill.style.width = '0%';
+            progressText.textContent = '正在上传...';
+
+            try {
+                const arrayBuffer = await selectedFile.arrayBuffer();
+                const base64Content = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+                
+                const filePath = 'files/' + Date.now() + '_' + selectedFile.name;
+                
+                const apiUrl = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${filePath}`;
+                
+                const response = await fetch(apiUrl, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${githubToken}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    },
+                    body: JSON.stringify({
+                        message: `Upload file: ${fileName}`,
+                        content: base64Content,
+                        branch: GITHUB_CONFIG.branch
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || '上传失败');
+                }
+                
+                const fileUrl = `https://raw.githubusercontent.com/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/${GITHUB_CONFIG.branch}/${filePath}`;
+                
+                const files = getFiles();
+                files.push({
+                    id: Date.now().toString(),
+                    name: fileName,
+                    url: fileUrl,
+                    category: category,
+                    size: formatFileSize(selectedFile.size)
+                });
+                saveFiles(files);
+                
+                progressFill.style.width = '100%';
+                progressText.textContent = '上传完成！';
+                
+                setTimeout(() => {
+                    progressBar.classList.remove('show');
+                    document.getElementById('fileName').value = '';
+                    document.getElementById('selectedFileName').textContent = '';
+                    selectedFile = null;
+                    loadFiles();
+                    loadAdminFiles();
+                }, 1000);
+
+            } catch (error) {
+                console.error(error);
+                progressText.textContent = '上传失败: ' + error.message;
+                setTimeout(() => progressBar.classList.remove('show'), 3000);
+            }
         }
 
         function getFileIcon(fileName) {
             const ext = fileName.split('.').pop().toLowerCase();
             const icons = {
-                'pdf': '📕', 'doc': '📘', 'docx': '📘', 'xls': '📗', 'xlsx': '📗',
-                'ppt': '📙', 'pptx': '📙', 'jpg': '🖼️', 'jpeg': '🖼️', 'png': '🖼️',
-                'gif': '🖼️', 'mp4': '🎬', 'avi': '🎬', 'zip': '📦', 'rar': '📦'
+                'pdf': '📕', 'doc': '📘', 'docx': '📘',
+                'xls': '📗', 'xlsx': '📗', 'ppt': '📙', 'pptx': '📙',
+                'jpg': '🖼️', 'jpeg': '🖼️', 'png': '🖼️', 'gif': '🖼️',
+                'txt': '📄', 'zip': '📦', 'rar': '📦', '7z': '📦',
+                'mp4': '🎬', 'mp3': '🎵'
             };
-            return icons[ext] || '📄';
+            return icons[ext] || '📁';
         }
 
-        async function loadFiles() {
-            const files = getFiles();
-            updateCategoryTabs(files);
-            renderFileGrid(files);
-        }
-
-        function updateCategoryTabs(files) {
-            const existingCategories = [...new Set(files.map(f => f.category))];
-            const allCategories = ['all', ...existingCategories];
-            
-            const tabsContainer = document.getElementById('categoryTabs');
-            tabsContainer.innerHTML = '';
-
-            allCategories.forEach(category => {
-                const btn = document.createElement('button');
-                btn.className = 'category-tab' + (category === 'all' ? ' active' : '');
-                btn.textContent = category === 'all' ? '全部文件' : category;
-                btn.dataset.category = category;
-                btn.onclick = () => filterFiles(category);
-                tabsContainer.appendChild(btn);
-            });
+        function canPreview(fileName) {
+            const ext = fileName.split('.').pop().toLowerCase();
+            const previewable = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'txt', 'html'];
+            return previewable.includes(ext);
         }
 
         function renderFileGrid(files) {
-            const fileGrid = document.getElementById('fileGrid');
+            const grid = document.getElementById('fileGrid');
             
             if (files.length === 0) {
-                fileGrid.innerHTML = '<div class="empty-state"><i>📁</i><p>暂无文件，请等待老师上传学习资料</p></div>';
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <i>📁</i>
+                        <p>暂无文件，请等待老师上传学习资料</p>
+                    </div>
+                `;
                 return;
             }
 
-            fileGrid.innerHTML = files.map(file => `
-                <div class="file-card" onclick="downloadFile('${file.url}', '${file.name}')">
-                    <div class="file-icon">${getFileIcon(file.name)}</div>
-                    <div class="file-name">${file.name}</div>
-                    <div class="file-meta">📁 ${file.category}</div>
-                    <button class="download-btn">下载文件</button>
-                </div>
-            `).join('');
+            grid.innerHTML = files.map(file => {
+                const previewBtn = canPreview(file.name) 
+                    ? `<button class="action-btn preview-btn" onclick="previewFile('${file.url}', '${file.name}')">👁️ 预览</button>` 
+                    : '';
+                
+                return `
+                    <div class="file-card">
+                        <div class="file-icon">${getFileIcon(file.name)}</div>
+                        <div class="file-name">${file.name}</div>
+                        <div class="file-meta">📂 ${file.category}</div>
+                        <div class="file-meta">📏 ${file.size}</div>
+                        <div class="btn-group-horizontal">
+                            ${previewBtn}
+                            <button class="action-btn download-btn" onclick="downloadFile('${file.url}')">⬇️ 下载</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
 
-        function filterFiles(category) {
-            document.querySelectorAll('.category-tab').forEach(btn => btn.classList.remove('active'));
-            document.querySelector(`[data-category="${category}"]`).classList.add('active');
-
-            const files = getFiles();
-            const filtered = category === 'all' ? files : files.filter(f => f.category === category);
-            renderFileGrid(filtered);
+        function previewFile(url, fileName) {
+            const modal = document.getElementById('previewModal');
+            const title = document.getElementById('previewTitle');
+            const content = document.getElementById('previewContent');
+            
+            title.textContent = '预览：' + fileName;
+            
+            const ext = fileName.split('.').pop().toLowerCase();
+            
+            if (ext === 'pdf') {
+                content.innerHTML = `<iframe class="preview-content" src="${url}"></iframe>`;
+            } else if (['jpg', 'jpeg', 'png', 'gif'].includes(ext)) {
+                content.innerHTML = `<img src="${url}" style="max-width:100%;max-height:500px;border-radius:8px;">`;
+            } else if (ext === 'txt') {
+                content.innerHTML = `<iframe class="preview-content" src="${url}"></iframe>`;
+            } else {
+                content.innerHTML = `<p style="text-align:center;padding:50px;color:#888;">暂不支持此文件格式预览<br><br><button class="btn btn-primary" onclick="downloadFile('${url}')">直接下载</button></p>`;
+            }
+            
+            modal.classList.add('show');
         }
 
-        function downloadFile(url, fileName) {
-            if (url === '#') {
+        function closePreviewModal() {
+            document.getElementById('previewModal').classList.remove('show');
+        }
+
+        function downloadFile(url) {
+            if (url === '#' || !url || url.trim() === '') {
                 alert('此文件链接尚未配置，请联系老师');
                 return;
             }
-            window.open(url, '_blank');
+            
+            let fullUrl = url.trim();
+            if (!fullUrl.startsWith('http://') && !fullUrl.startsWith('https://')) {
+                fullUrl = 'https://' + fullUrl;
+            }
+            
+            window.open(fullUrl, '_blank');
+        }
+
+        function loadFiles() {
+            const files = getFiles();
+            const categories = ['高一数学', '高二数学', '高三数学', '高考真题', '模拟试题', '知识点总结', '其他'];
+            const uniqueCategories = [...new Set(files.map(f => f.category)), ...categories];
+            
+            const tabs = document.getElementById('categoryTabs');
+            tabs.innerHTML = `<button class="category-tab active" data-category="all" onclick="filterFiles('all')">全部文件</button>` +
+                [...new Set(uniqueCategories)].map(cat => 
+                    `<button class="category-tab" data-category="${cat}" onclick="filterFiles('${cat}')">${cat}</button>`
+                ).join('');
+            
+            renderFileGrid(files);
+        }
+
+        function filterFiles(category) {
+            document.querySelectorAll('.category-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelector(`[data-category="${category}"]`).classList.add('active');
+            
+            const files = getFiles();
+            const filtered = category === 'all' ? files : files.filter(f => f.category === category);
+            renderFileGrid(filtered);
         }
 
         function loadAdminFiles() {
@@ -447,6 +639,7 @@
             saveFiles(updatedFiles);
             closeDeleteModal();
             loadAdminFiles();
+            loadFiles();
             alert('文件删除成功！');
         }
 
@@ -476,10 +669,16 @@
                 saveFiles(files);
                 closeImportModal();
                 loadAdminFiles();
+                loadFiles();
                 alert('数据导入成功！');
             } catch {
                 alert('数据格式错误，请检查');
             }
+        }
+
+        function closeImportModal() {
+            document.getElementById('importModal').classList.remove('show');
+            document.getElementById('importData').value = '';
         }
 
         loadFiles();
